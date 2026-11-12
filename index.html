@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法伤害模拟器 - 精简版</title>
+    <style>
+        body {
+            background-color: #1e1e24;
+            color: #d4d4d4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #25252d;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 550px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        h2 {
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .note {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            background: #1a1a20;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #4a90e2;
+        }
+        .input-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            flex: 1;
+            color: #a0a0a0;
+        }
+        .input-group input {
+            width: 140px;
+            background-color: #1e1e24;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 4px;
+            text-align: right;
+            font-size: 16px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+        button {
+            width: 100%;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #357abd;
+        }
+        .result-box {
+            margin-top: 20px;
+            background-color: #1e1e24;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #e2a04a;
+            display: none;
+        }
+        .result-title {
+            color: #e2a04a;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #444;
+            padding-bottom: 8px;
+        }
+        .step {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .formula-value {
+            color: #fff;
+            font-family: monospace;
+            font-size: 15px;
+        }
+        .highlight {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+        .final-damage {
+            font-size: 24px;
+            color: #ff5e5e;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #444;
+        }
+        .simulate-btn {
+            background-color: #2ecc71;
+            margin-top: 10px;
+        }
+        .simulate-btn:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>魔法伤害计算器</h2>
+    
+    <div class="note">
+        💡 <b>提示：</b><br>
+        直接填入你游戏面板上的 <b>智力</b>、<b>魔力(MAGIC)</b> 和技能的 <b>熟练度等级</b> 即可。
+    </div>
+
+    <div class="input-group">
+        <label>角色总智力:</label>
+        <input type="number" id="intVal" value="200" step="1">
+    </div>
+    <div class="input-group">
+        <label>面板魔力 (MAGIC):</label>
+        <input type="number" id="magicVal" value="200" step="1">
+    </div>
+    <div class="input-group">
+        <label>技能熟练度等级 (如10):</label>
+        <input type="number" id="masteryLvl" value="10" step="1">
+    </div>
+    <div class="input-group">
+        <label>技能基础攻击力:</label>
+        <input type="number" id="baseAtkVal" value="180" step="1">
+    </div>
+
+    <button onclick="calculate()">计算伤害范围</button>
+    <button class="simulate-btn" onclick="simulateAttack()">🎲 模拟一次伤害</button>
+
+    <div class="result-box" id="resultBox">
+        <div class="result-title">详细计算过程</div>
+        
+        <div class="step">
+            <span>1. 计算前半段 (基础攻击 ÷ 100 × 魔力):</span>
+            <span class="formula-value" id="step1">-</span>
+        </div>
+
+        <div class="step">
+            <span>2. 计算最大值 (前半段 × (智力 ÷ 125 + 1)):</span>
+            <span class="formula-value" id="step2">-</span>
+        </div>
+
+        <div class="step">
+            <span>3. 计算熟练度 ((0.1 + 等级 ÷ 10) × 0.7):</span>
+            <span class="formula-value" id="step3">-</span>
+        </div>
+
+        <div class="step">
+            <span>4. 计算最小值 (前半段 × (智力 × 熟练度 ÷ 125 + 1) 截断):</span>
+            <span class="formula-value" id="step4">-</span>
+        </div>
+
+        <div class="final-damage" id="finalRange">范围: - ~ -</div>
+    </div>
+</div>
+
+<script>
+    let minDamage = 0;
+    let maxDamage = 0;
+
+    function calculate() {
+        // 获取输入值
+        const intVal = parseFloat(document.getElementById('intVal').value) || 0;
+        const magicVal = parseFloat(document.getElementById('magicVal').value) || 0;
+        const masteryLvl = parseFloat(document.getElementById('masteryLvl').value) || 0;
+        const baseAtk = parseFloat(document.getElementById('baseAtkVal').value) || 0;
+
+        // 1. 算前半段: (基础攻击 ÷ 100) × 魔力
+        const firstHalf = (baseAtk / 100) * magicVal;
+        document.getElementById('step1').innerHTML = `${baseAtk} ÷ 100 × ${magicVal} = <span class="highlight">${firstHalf}</span>`;
+
+        // 2. 最大值: 前半段 × (智力 ÷ 125 + 1)
+        maxDamage = firstHalf * ((intVal / 125) + 1);
+        document.getElementById('step2').innerHTML = `${firstHalf} × (${intVal} ÷ 125 + 1) = <span class="highlight">${maxDamage.toFixed(2)}</span>`;
+
+        // 3. 熟练度: (0.1 + 技能等级 ÷ 10) × 0.7
+        const mastery = (0.1 + (masteryLvl / 10)) * 0.7;
+        document.getElementById('step3').innerHTML = `(0.1 + ${masteryLvl} ÷ 10) × 0.7 = <span class="highlight">${mastery.toFixed(2)}</span>`;
+
+        // 4. 最小值: 前半段 × (智力 × 熟练度 ÷ 125 + 1) 然后截断
+        const rawMinDamage = firstHalf * ((intVal * mastery / 125) + 1);
+        minDamage = Math.floor(rawMinDamage);
+        document.getElementById('step4').innerHTML = `${firstHalf} × (${intVal} × ${mastery.toFixed(2)} ÷ 125 + 1) = ${rawMinDamage.toFixed(2)}，截断成 <span class="highlight">${minDamage}</span>`;
+
+        // 显示最终结果
+        const maxFinal = Math.floor(maxDamage);
+        const diffPercent = ((maxFinal - minDamage) / minDamage * 100).toFixed(1);
+        document.getElementById('finalRange').innerHTML = `伤害范围: ${minDamage} ~ ${maxFinal} <br><span style="font-size:14px; color:#aaa;">(上下差 ${diffPercent}%)</span>`;
+        document.getElementById('resultBox').style.display = 'block';
+    }
+
+    function simulateAttack() {
+        // 确保已经计算过
+        if (minDamage === 0 && maxDamage === 0) {
+            alert("请先点击“计算伤害范围”！");
+            return;
+        }
+
+        // 均匀掷点：在最小值和最大值之间随机取数（包含小数，然后取整）
+        const randomDamage = Math.floor(Math.random() * (Math.floor(maxDamage) - minDamage + 1)) + minDamage;
+        
+        const finalRangeDiv = document.getElementById('finalRange');
+        finalRangeDiv.innerHTML = `伤害范围: ${minDamage} ~ ${Math.floor(maxDamage)}<br><br>
+                                   <span style="color:#2ecc71; font-size: 22px; text-shadow: 0 0 10px rgba(46,204,113,0.5);">🎲 本次模拟伤害: ${randomDamage}</span>`;
+    }
+</script>
+
+</body>
+</html>
