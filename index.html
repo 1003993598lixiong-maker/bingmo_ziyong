@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>伤害模拟计算器（含防御减免）</title>
+    <title>伤害模拟计算器（克制/防御版）</title>
     <style>
         body {
             background-color: #1e1e24;
@@ -137,12 +137,8 @@
 <body>
 
 <div class="container">
-    <h2>伤害模拟计算器 <span style="font-size: 12px; color:#888; font-weight: normal;">(包含防御减免)</span></h2>
+    <h2>伤害模拟计算器 <span style="font-size: 12px; color:#888; font-weight: normal;">(防御 & 克制版)</span></h2>
     
-    <div class="note">
-        💡 <b>提示：</b>魔法公式已按原图内置。添加了怪物防御计算，物理防御公式同理。
-    </div>
-
     <div class="input-group">
         <label>角色总智力:</label>
         <input type="number" id="intVal" value="200" step="1">
@@ -153,7 +149,6 @@
     </div>
     <div class="input-group">
         <label>技能熟练度 (最高10):</label>
-        <!-- 加上了 max="10" 限制 -->
         <input type="number" id="masteryLvl" value="10" step="1" min="0" max="10">
     </div>
     <div class="input-group">
@@ -172,6 +167,17 @@
         <select id="defType">
             <option value="magic">魔法防御 (Magic Def)</option>
             <option value="phys">物理防御 (Phys Def)</option>
+        </select>
+    </div>
+    
+    <div style="border-top: 1px dashed #444; margin: 15px 0;"></div>
+
+    <div class="input-group">
+        <label>属性克制:</label>
+        <select id="elementType">
+            <option value="normal">无克制 (正常伤害)</option>
+            <option value="advantage">克制 (伤害 +25%)</option>
+            <option value="disadvantage">被克制 (伤害 -25%)</option>
         </select>
     </div>
 
@@ -208,6 +214,10 @@
             <span>6. 过防计算 (原伤害 × 100 ÷ (防御 + 100)):</span>
             <span class="formula-value" id="step6">-</span>
         </div>
+        <div class="step">
+            <span>7. 属性克制修正:</span>
+            <span class="formula-value" id="step7">-</span>
+        </div>
 
         <div class="final-damage" id="finalRange">最终伤害: - ~ -</div>
         <div class="sub-final" id="simulateResult" style="display: none;"></div>
@@ -218,6 +228,7 @@
     let finalMin = 0;
     let finalMax = 0;
     let defTypeText = "";
+    let elementText = "";
 
     function calculate() {
         // 1. 获取基础输入
@@ -225,7 +236,7 @@
         const magicVal = parseFloat(document.getElementById('magicVal').value) || 0;
         let masteryLvl = parseFloat(document.getElementById('masteryLvl').value) || 0;
         
-        // 额外保护：如果用户强行输入了大于10的值，自动限制为10
+        // 保护：熟练度最高10
         if (masteryLvl > 10) {
             masteryLvl = 10;
             document.getElementById('masteryLvl').value = 10;
@@ -236,13 +247,17 @@
         const defType = document.getElementById('defType').value;
         defTypeText = defType === 'magic' ? "魔防" : "物防";
 
-        // 2. 计算未过防的魔法伤害 (按原图公式)
+        // 获取属性克制
+        const elementType = document.getElementById('elementType').value;
+        let multiplier = 1.0;
+        if (elementType === 'advantage') { multiplier = 1.25; elementText = "克制 (+25%)"; }
+        else if (elementType === 'disadvantage') { multiplier = 0.75; elementText = "被克制 (-25%)"; }
+        else { multiplier = 1.0; elementText = "无克制"; }
+
+        // 2. 计算未过防的魔法伤害
         const firstHalf = (baseAtk / 100) * magicVal;
         const rawMax = firstHalf * ((intVal / 125) + 1);
-        
-        // 熟练度系数: (0.1 + 熟练度/10) * 0.7
         const mastery = (0.1 + (masteryLvl / 10)) * 0.7;
-        
         const rawMin = firstHalf * ((intVal * mastery / 125) + 1);
         
         const unblockedMin = Math.floor(rawMin);
@@ -255,21 +270,27 @@
         
         document.getElementById('step5').innerHTML = `<span class="highlight">${unblockedMin} ~ ${unblockedMax}</span>`;
 
-        // 3. 计算过防后的伤害 (公式：伤害 × 100 ÷ (防御 + 100) 截断)
+        // 3. 计算过防后的伤害
         const calcMin = Math.floor(unblockedMin * 100 / (monsterDef + 100));
         const calcMax = Math.floor(unblockedMax * 100 / (monsterDef + 100));
-        
-        // 存储最终结果供模拟器使用
-        finalMin = calcMin;
-        finalMax = calcMax;
 
         document.getElementById('step6').innerHTML = `最小: ${unblockedMin} × 100 ÷ (${monsterDef} + 100) = <span class="highlight">${calcMin}</span><br>
                                                       最大: ${unblockedMax} × 100 ÷ (${monsterDef} + 100) = <span class="highlight">${calcMax}</span>`;
 
+        // 4. 计算属性克制后的最终伤害
+        const finalCalcMin = Math.floor(calcMin * multiplier);
+        const finalCalcMax = Math.floor(calcMax * multiplier);
+        
+        finalMin = finalCalcMin;
+        finalMax = finalCalcMax;
+
+        document.getElementById('step7').innerHTML = `最小: ${calcMin} × ${multiplier} = <span class="highlight">${finalCalcMin}</span><br>
+                                                      最大: ${calcMax} × ${multiplier} = <span class="highlight">${finalCalcMax}</span>`;
+
         // 显示最终结果
-        document.getElementById('finalRange').innerHTML = `过${defTypeText}后: ${calcMin} ~ ${calcMax}`;
+        document.getElementById('finalRange').innerHTML = `最终伤害: ${finalCalcMin} ~ ${finalCalcMax}`;
         document.getElementById('resultBox').style.display = 'block';
-        document.getElementById('simulateResult').style.display = 'none'; // 隐藏上次的模拟结果
+        document.getElementById('simulateResult').style.display = 'none';
     }
 
     function simulateAttack() {
@@ -283,7 +304,7 @@
         
         const simDiv = document.getElementById('simulateResult');
         simDiv.style.display = 'block';
-        simDiv.innerHTML = `🎲 本次模拟（过${defTypeText}）伤害: <span style="color:#2ecc71; font-size: 24px; text-shadow: 0 0 10px rgba(46,204,113,0.5);">${randomDamage}</span>`;
+        simDiv.innerHTML = `🎲 本次模拟（${elementText}）伤害: <span style="color:#2ecc71; font-size: 24px; text-shadow: 0 0 10px rgba(46,204,113,0.5);">${randomDamage}</span>`;
     }
 </script>
 
